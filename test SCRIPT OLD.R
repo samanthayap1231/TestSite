@@ -55,49 +55,10 @@ colnames(m1$analyses)
 ###the code looks for 2 analysis columns, if you want it to look for more columns, change:
 ###the "fields=2" to the number of your choice
 dm        <- dart.meta.data.merge(d3, m1)
-###merge genotype and meta data
-###A reason why genotype & meta data don't merge is that there are duplicates in the genotype data
-###use this to remove dups: d3_rm  <- remove.duplicate.samples(d3, least_missing=TRUE, remove_fixed_loci=TRUE)
-###code to tell if there are dups: d3$sample_names[duplicated(d3$sample_names)]
-
-###code to tell if all samples in raw merge with meta
-#d3$sample_names[!(d3$sample_names %in% m1$sample_names)]
-
-
-#note: steps upto now do not remove any samples from analysis.
-#to remove, please go to meta data, and form an analysis column and blank any cells you do not want analysed. 
-#and then run the lines below.
-#samples should be removed if poor quality, e.g. missing 80% loci, check quality_report.txt from qual_stat folder
-
 analysis <- "rrsites_SAM" #colnames(m1$analyses)[5]
 fields    <- c(analysis) 
 dms     <- data.by.meta.fields(dm, fields, RandRbase, species, dataset, object=analysis)
 ###dms contains the final cleaned data that you want to run popgen analysis with
-
-###note that everytime you run data.by.meta.fields(), a .rda file is created in the dart_standard folder
-###to load a stored file:
-#load("D:/test/test/dart_standard/raw_SNPFilt_1SNPperClone_Field_pops/test_Dtest19-0000.rda")
-###the object will be called dart_data in the environment on your right
-###to use the object, rename it:
-#dms <- dart_data
-
-###after loading, remember to load analysis/RanRbase/species/dataset:
-#analysis <- "pops"
-#RandRbase <- "D:/test/"
-#species <- "test"
-#dataset <- "Dtest19-0000"
-
-###useful Scripts#####################################################################################
-dms$meta$sample_names #lists all sample names that you want to analyse
-dms$meta$analyses[,analysis] #lists the population name of each sample you want to analyse 
-which(dms$sample_names == "NSW0000000") #find where in the list your sample sits (e.g. 3rd one across all samples)
-
-dms$gt[1,] #lists all the loci for the first sample
-dms$gt[,1] #lists first loci for all samples
-
-table(dms$meta$sample_names) # table of the number of samples per population
-length(which(is.na(dms$gt[1,]))) # the number of missing loci for the first sample 
-length(which(dms$gt[1,]==2)) # the number of heterozygotes for the first sample, this script can be used for accounting for homozygotes by changing the 2 to 0 or 1
 
 #############generate a simple distance matrix of genotype data######################################
 data <- as.matrix(dist(dms$gt))
@@ -814,9 +775,7 @@ iconFiles = pchIcons(shapes, 10, 10,
                      col = c(cols), lwd = 1.5)
 nums <- c(1,1,2,2,2,3,3,3,3,3,3,3)
 
-# mypng = readPNG(iconFiles[1])
-# image(volcano)
-# grid.raster(mypng, x=.3, y=.3, width=.25)
+
 
 leaflet(mean_D_B) %>% 
   addTiles() %>%
