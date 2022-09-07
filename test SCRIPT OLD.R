@@ -1,14 +1,6 @@
-###DO YOU HAVE RRtools installed? 
-###if not, unhash the bottom two lines,change the directory in second line and run both lines:
-#library(devtools)
-#install("C:/Users/yaps/Desktop/RRtools")
-
 library(RRtools) 
 
 load("C:/Users/yaps/Desktop/rrspecies/SYsaved_scripts.R")
-
-###the 3 lines below are very important, as R look for data through the info you provide for these objects:
-###RandRbase, Species, dataset
 
 maindir <- "C:/Users/yaps/Desktop/"
 setwd(maindir)
@@ -17,81 +9,21 @@ RandRbase <- "rrspecies/" #main directory
 species <- "PersHirs" #species name
 dataset <- "DPers20-5061" #dart order
 
-###CHECK your genotype file, note number of columns (nmetavar) and rows (topskip) until your genotype data starts , i.e,. the 0s,1s and 2s...
-
 topskip   <- 6 
 nmetavar  <- 18
 
 d1        <- read.dart.xls.onerow(RandRbase,species,dataset,topskip, nmetavar, euchits=FALSE)
-###this line will read like this:
-###Reading data file: D:/test/dart_raw/Report_Dtest19-0000_SNP_singlerow_2.csv  
-qc1       <- report.dart.qc.stats(d1, RandRbase, species, dataset, threshold_missing_loci = 0.8) # threshold_missing_loci: check which samples have 80% missing loci
-###this line will generate reports in:  D:/test/qual_stat
 
 d2        <- remove.poor.quality.snps(d1, min_repro=0.96, max_missing=0.2) 
-###remove poor quality SNPs
-###max missing: loci that 20% samples have missing info are removed. so the lower the score the more stringent..
-###min_repro : minimum reproducibility score, a dart measure to test data quality, the better the data, the higher the score
-qc2       <- report.dart.qc.stats(d2, RandRbase, species, dataset)
 
 d3        <- sample.one.snp.per.locus.random(d2, seed=12345) 
-###dart returns loci (sequences) that can have multiple SNPs, 
-###this is because SNPs situated close together can occur due to linkage disequilibrium. our popgen studies dont rely on these assoiciations.. 
-###so we only select one SNP to analyse if multiple SNPs occur on a locus
-qc3       <- report.dart.qc.stats(d3, RandRbase, species, dataset)
-
-# file <- write.dart.data(d3, RandRbase, species, dataset)
-#this script writes the object, "d3" to a directory such as: rrspecies/PersHirs/dart_standard/raw_SNPFilt_1SNPperClone
-#highlighted in yellow is the "treatment" given to the genotype data. this can be identified whenyou type "d3$treatment"
-#you can save d1, d2, d3 in the same way
-# load("rrspecies/PersHirs/dart_standard/raw_SNPFilt_1SNPperClone/PersHirs_DPers20-5061.rda")
-#to  load d3
 
 m1        <- read.meta.data(d3, RandRbase, species, dataset, fields=3)  
-colnames(m1$analyses)
-###import meta data from D:/test/meta/test_Dtest19-0000_meta.xlsx 
-###make sure your meta data has at least 6 columns:
-###sample, site, lat, long, and then 2 analysis columns with any name..
-###the code looks for 2 analysis columns, if you want it to look for more columns, change:
-###the "fields=2" to the number of your choice
+
 dm        <- dart.meta.data.merge(d3, m1)
 analysis <- "rrsites_SAM" #colnames(m1$analyses)[5]
 fields    <- c(analysis) 
 dms     <- data.by.meta.fields(dm, fields, RandRbase, species, dataset, object=analysis)
-###dms contains the final cleaned data that you want to run popgen analysis with
-
-#############generate a simple distance matrix of genotype data######################################
-data <- as.matrix(dist(dms$gt))
-#image(t(data)) #quick but ugly
-
-library(reshape2)
-melted_data <- melt(data)
-
-library(ggplot2)
-ggplot(data = melted_data, aes(x=Var1, y=Var2, fill=value)) + 
-  geom_tile()
-
-#distance-based tree of data
-library(ape)
-plot(hclust(dist(dms$gt)))
-par(mar=c(0,0,0,0)) #reset by: par(mar=c(2,2,2,2))
-arbol <- nj(data); plot(arbol, cex=0.5)
-
-library("igraph")
-g1 = graph_from_incidence_matrix(data, directed=FALSE, weighted=TRUE)
-hist(edge_attr(g1)$weight) #check histogram to find best cutoff, aim for the highest freq
-mean(edge_attr(g1)$weight)
-sd(edge_attr(g1)$weight)
-
-cut.off <- 70
-net.sp <- delete_edges(g1, E(g1)[weight<cut.off])
-par(mai=c(0,0,0,0))
-plot(g1,vertex.label=NA, layout=layout_with_fr,vertex.size=4,edge.width=0.1)
-#plot(g1,vertex.label=NA, layout=layout_components,vertex.size=4,edge.width=0.1)#be vary of the results, it tries to find components
-plot(net.sp,vertex.label=NA, layout=layout_as_star,vertex.size=4,edge.width=0.1) 
-
-###downsample SNPs###########################################################################################################
-dSVD <- downsample.snps(dms, number=50, seed=12345) #down sample SNPs
 
 #######################PRINCIPAL COMPONENT ANALYSIS##########################################################################
 library(adegenet) 
@@ -105,182 +37,14 @@ scatter(nd_pca) #a quick way to check data
 plot(nd_pca$scores[,1],nd_pca$scores[,2], xlab="PC1", ylab="PC2")
 text(nd_pca$scores[,1],nd_pca$scores[,2], dms$meta$analyses[,analysis],pos=2,cex=0.3)
 
-#########steps from here on makes pretty figs using the drawing program, "ggplot2"
-
-sample_PC1_PC2 <- cbind(site=dms$meta$analyses[,analysis], #the cbind function combines different columns together
-                        lat=dms$meta$lat,
-                        long=dms$meta$long,
-                        PC1=nd_pca$scores[,1], #PC1
-                        PC2=nd_pca$scores[,2], #PC2
-                        PC3=nd_pca$scores[,3]) #PC3
-
-#write.table(sample_PC1_PC2, #this saves the table into a directory
-#            PCAfile_directory, 
-#            sep="\t",col.names=NA)
-
-#remove rownames and add sample name to data, rownames do not get recognised by the drawing program
-names <- rownames(sample_PC1_PC2);rownames(sample_PC1_PC2) <- NULL 
-data <- cbind(names,sample_PC1_PC2)
-
-df <- data.frame(data, stringsAsFactors = FALSE) #make data  from a matrix into dataframe, stringsAsFactors makes R view all columns as factors not numebrs
-
-#make sure columns of numbers are viewed as numbers by R
-df$PC1 <- as.numeric(df$PC1)
-df$PC2 <- as.numeric(df$PC2)
-df$PC3 <- as.numeric(df$PC3)
-df$lat <- as.numeric(df$lat)
-df$long <- as.numeric(df$long)
-
-#make sure the data is ordered correctly, either by site or latitude
-df2new <- df[order(-df$lat),] # this dataset is used in generating a summary of pops and their average latlongs for making maps/tables
-
-df2new$site <- factor(df2new$site, levels = unique(df2new$site),ordered = TRUE)
-
-library(plyr) #the data from df2new is summarised using ddply() in this R package
-rep <- ddply(df2new, 
-             .(site), 
-             summarise,
-             lat  = mean(lat),
-             long = mean(long),
-             PC1  = mean(PC1),
-             PC2  = mean(PC2),
-             PC3 = mean(PC3))
-
-rep2 <- rep[order(-rep$lat),]
-x <- length(unique(df2new$site)) #count how many pops there are
-bgcols=rainbow(x) #generates X number of rainbow colours
-rep2$nums_n_site <- paste0(1:x,": ",rep2$site)
-rep2$num_site <- 1:x
-rep222 <- rep2
-rep222$nums_n_site <-factor(rep222$nums_n_site, levels=unique(rep222$nums_n_site)) #order data according to decreasing latitude
-
-df3 <- merge(df,rep222[,c(1,7,8)], by="site") #note that merging reorders the data, so make sure both df and rep222 are in the same order
-
-f <- nd_pca$eig[nd_pca$eig > sum(nd_pca$eig/length(nd_pca$eig))] #calculate variance explained
-e <- round(f*100/sum(nd_pca$eig),1) #percent variance
-
-library(ggplot2)
-library(ggrepel)# learn ggplot, it is useful.
-###http://www.sthda.com/english/wiki/ggplot2-scatter-plots-quick-start-guide-r-software-and-data-visualization
-
-ggplot(data=df3, aes(x=PC1, y=PC2,col=nums_n_site))+ 
-  geom_point(alpha=0.5, size=2) + #alpha is for transparency
-  geom_text_repel(aes(label = num_site),col="black",size=2,data =df3,segment.color = NA)+
-  theme(legend.text=element_text(size=8),
-        legend.title = element_blank(),
-        legend.position = "right",
-        plot.title = element_text(face = "bold.italic", size=14))+
-  #guides(col = guide_legend(ncol = 1)) + #how many columns in the legend
-  ylab(paste0("PC2"," (",e[2],"%)"))+ 
-  xlab(paste0("PC1"," (",e[1],"%)"))+
-  scale_color_manual(labels=rep222$nums_n_site, 
-                     values=c("blue","blue", "blue","red","grey","blue","blue"))
-rainbow(length(unique(df2new$site)))
-ggsave("D:/test/test_PC1_PC2_pops.tiff",width = 12, height = 8, dpi = 300, units = "in", device='tiff')
-###this saves the ggplot to the directory of your choice
-
-#########steps from here on to plot map  with dots and dot colour corresponds with PCA dot colour
-
-###if you plan to save map, capture the image by running the tiff() below,
-###tell it to stop capturing by running the dev.off() further down...
-#tiff("E:/test/test_samp_distribPCA.tiff", units="in", width=12, height=8, res=480)
-
-par(mai=c(0.1,0.1,0.2,0.1)) #par() sets where to plot figure, controls the amount of whitespace.
-
-row_sub = apply(data.frame(dms$meta$long), 1, function(row) all(row !=0 )) #find any longitude in the data equals to zero 
-newdmslong <- data.frame(dms$meta$long)[row_sub,]
-row_sub = apply(data.frame(dms$meta$lat), 1, function(row) all(row !=0 )) #find any latitude in the data equals to zero 
-newdmslat <- data.frame(dms$meta$lat)[row_sub,]
-
-divxlims <- c(min(na.omit(newdmslong))-1,max(na.omit(newdmslong))+1) #find the min / max longitude
-divylims <- c(min(na.omit(newdmslat))-1,max(na.omit(newdmslat))+1) #find the min / max latitude
-
-library(oz) #draws australia coastlines and state boundaries
-#try running:
-#oz() or nsw()
-
-oz(xlim=divxlims, ylim=divylims, lwd=0.5)
-for (h in 1:x){
-  points(rep222$long[h],rep222$lat[h],pch=21,lwd=0.2,bg=bgcols[h],cex=1) #put points on map
-  }
-
-rep23 <- rep222[complete.cases(rep222), ]#remove latlongs that are NAs
-
-library(maptools) #run pointLabel, a function that moves around labels so that they dont overlap
-pointLabel(rep23$long, rep23$lat, 
-           labels = paste("  ", rep23$num_site, "  ", sep=""), 
-           cex=1, font=4,offset=0.2)
-
-dev.off()
-#to revert back to default par(), type:
-#par(mai=c(1,1,1,1))
-
-############################################################################################
-##Generate PCA plot with dots coloured according to latitude
-
-PC1_PC2_plot <- ggplot(df, aes(PC1, PC2, col=lat))+ geom_point(alpha=0.5) + 
-  theme(legend.position="none",aspect.ratio = 1,
-        plot.title = element_text(face = "bold.italic", size=9),
-        axis.text = element_text(size = 6),
-        axis.title = element_text(size = 7),
-        legend.title = element_text(size = 7))+
-  ylab(paste0("PCA2"," (",e[2],"%)"))+ xlab(paste0("PCA1"," (",e[1],"%)"))+
-  ggtitle(paste0(species, "\n"," PC1 vs PC2")) + scale_color_gradient(low="blue", high="red")
-
-###PC1 vs PC3
-PC1_PC3_plot <- ggplot(df, aes(PC1, PC3, col=lat))+ geom_point(alpha=0.5) + 
-  theme(legend.position="none",aspect.ratio = 1,
-        plot.title = element_text(face = "bold.italic", size=9),
-        axis.text = element_text(size = 6),
-        axis.title = element_text(size = 7))+
-  ylab(paste0("PCA3"," (",e[3],"%)"))+ xlab(paste0("PCA1"," (",e[1],"%)"))+
-  ggtitle(paste0("\n"," PC1 vs PC3")) + scale_color_gradient(low="blue", high="red")
-
-###PC2 vs PC3
-PC2_PC3_plot <- ggplot(df, aes(PC2, PC3, col=lat))+ geom_point(alpha=0.5) +
-  ylab(paste0("PCA3"," (",e[3],"%)"))+ xlab(paste0("PCA2"," (",e[2],"%)"))+
-  theme(legend.position="none",aspect.ratio = 1,
-        plot.title = element_text(face = "bold.italic", size=9),
-        axis.text = element_text(size = 6),
-        axis.title = element_text(size = 7),
-        legend.title = element_text(size = 7)) +    
-  scale_color_gradient(low="blue", high="red")+
-  ggtitle(paste0("\n"," PC2 vs PC3"))
-
-PC_plot <- ggplot(df, aes(PC2, PC3, col=lat))+ geom_point() +
-  ylab(paste0("PCA3"," (",e[3],"%)"))+ xlab(paste0("PCA2"," (",e[2],"%)"))+
-  scale_color_gradient(low="blue", high="red")+
-  ggtitle(paste0(" PC2 vs PC3"))
-library(cowplot)
-theme_set(theme_gray())
-
-legend_b <- get_legend(PC_plot + theme(legend.position="bottom",
-                                       legend.text=element_text(size=4))+ labs(col = "Latitude"))
-
-# add the legend underneath the row we made earlier. Give it 10% of the height
-# of one plot (via rel_heights).
-prow <- plot_grid(PC1_PC2_plot,PC1_PC3_plot,PC2_PC3_plot, ncol=3)
-p <- plot_grid( prow, legend_b, ncol = 1, rel_heights = c(1, .3))
-p
-ggsave(paste0("PCA/",species,"_PC1_PC2_PC3.tiff"),
-       width = 8, height = 3, dpi = 300, units = "in", device='tiff')
-
 ###########################FST#############################################################################################
 
 pFst      <- population.pw.Fst(dms, dms$meta$analyses[,analysis], RandRbase,species,dataset) #calculates genetic distance between populations
-#fst is calculated using a function from R package SNPrelate, and Jason has written  to function into population.pw.Fst(), 
-#calculates Fst using "W&H02" - relative beta estimator in Weir & Hill 2002, Jason's default
-#an alternate estimator is "W&C84" - Fst estimator in Weir & Cockerham 1984
-#to change the estimator, refer back to the population.pw.Fst() script
-
 pS        <- population.pw.spatial.dist(dms, dms$meta$analyses[,analysis]) #calculates geographic distance between populations
-
-####plot IBD plot
 
 library(reshape2) #for melting data
 library(vegan) #for mantel test
 
-#tiff("E:/test/test fst plot.tiff", units="in", width=10, height=5, res=300)
 Fst_sig <- cbind(melt(pS$S), unlist(as.list(pFst$Fst)))
 colnames(Fst_sig)[3] <- "Geo_dist"
 colnames(Fst_sig)[4] <- "Fst"
@@ -291,17 +55,12 @@ plot(Fst_sig$Geo_dist2, Fst_sig$Fst, xlab="distance (km)", ylab="Fst",cex=1,
 
 abline(lm(Fst_sig$Fst ~ Fst_sig$Geo_dist2), col = "blue")
 title(main=paste0(species, " pairwise fst plots"),adj = 0.001,font.main=4) #from left (0) to right (1) with anything in between,
-#line = positive values move title text up, negative - down)
 man <- mantel(xdis = pS$S, ydis = pFst$Fst, permutations = 999, na.rm = TRUE) #mantel test for IBD
-#if significant but R is low, maybe one population that is distant has low fst?
-#if not significant but R is high, then sample size is low?
 legend("bottomright", bty="n", cex=0.75,text.col="blue",
        legend=paste("Mantel statistic r is ", 
                     format(man$statistic, digits=4),
                     " P =",format(man$signif)))
-#dev.off()
 
-####plot geographic distance heatmap and fst heatmap 
 library(ggplot2) #plots pretty figs
 library(cowplot) #combines pretty figs
 
@@ -341,14 +100,6 @@ p2 <- ggplot(df2, aes(var1, var2, na.rm = TRUE)) +
 
 plot_grid(p1,p2, ncol=1)
 
-#ggsave("E:/test/test fst heatmaps.tiff"),
-#       width = 8, height = 9, dpi = 300, units = "in", device='tiff')
-
-###############################################LEA#######################################################################
-#estimate individual allele frequencies through admixture proportions Q and population-specific
-#allele frequencies F inferred from NMF (non-negative matrix factorisation)
-#it is a dimension reduction and factor analysis method
-#for finding a low-rank approximation of a matrix, which is similar to PCA
 
 library(LEA)
 
