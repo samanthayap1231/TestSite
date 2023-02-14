@@ -1,3 +1,4 @@
+
 # Overview of our DArTseq analyses
 
 This git repository explains our analytical workflow of DArTseq data to generate population genetic outputs. Here is a general overview of how to set up files, the type of analyses and outputs we obtain and how we interpret the results.
@@ -111,3 +112,4 @@ Obtain a copy of the in house made R package from XXX
 
 -   uses readcount data file supplied by dart
 -   makes histograms of the readcount data which can sometimes be used to determine if individuals or groups of individuals have poidy variation
+
