@@ -1,6 +1,8 @@
 
 # Overview of our DArTseq analyses
 [This README documentation is adopted from Eilish's README file: https://github.com/eilishmcmaster/BaseSoSAnalyses]
+
+
 This git repository explains our analytical workflow of DArTseq data to generate population genetic outputs. Here is a general overview of how to set up files, the type of analyses and outputs we obtain and how we interpret the results.
 
 The analyses are split into individual R files so that more in depth explaining can be done for each analysis. The files have been numbered to make it easier to navigate through. Typically we combine the scripts into a single file to keep track of the analyses that are run on a specific dataset.
