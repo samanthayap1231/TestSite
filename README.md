@@ -1,7 +1,5 @@
 
 # Overview of our DArTseq analyses
-[This README documentation is adopted from Eilish's README file: https://github.com/eilishmcmaster/BaseSoSAnalyses]
-
 
 [This README documentation is adopted from Eilish's README file: <https://github.com/eilishmcmaster/BaseSoSAnalyses>]
 
