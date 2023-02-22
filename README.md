@@ -1,46 +1,73 @@
 # Overview of our DArTseq analyses
 
-This git repository explains our analytical workflow of DArTseq data to generate population genetic outputs. Here is a general overview of how to set up files, the type of analyses and outputs we obtain and how we interpret the results.
+[This README documentation is adopted from Eilish's README file: <https://github.com/eilishmcmaster/BaseSoSAnalyses>]
+
+This git repository explains our analytical workflow of DArTseq data that was designed to streamline the production of population genetic outputs from a range of common Australian species in New South Wales as part of our flagship Restore and Renew project, and this workflow have since been used by ReCER for a range of large scale multispecies studies.
+
+Here is a general overview of how to set up files, the type of analyses and outputs we obtain and how we interpret the results.
 
 The analyses are split into individual R files so that more in depth explaining can be done for each analysis. The files have been numbered to make it easier to navigate through. Typically we combine the scripts into a single file to keep track of the analyses that are run on a specific dataset.
 
 ## DArTseq data
 
-### How to use?
+### What do we get?
 
-Our analyses are split into R files which focus on one analysis at a time. This makes particular plots or calculations easy to find in the git repository, however to use them they will need to be combined into a single document. I recommend that you download the first file (`1 data import and qc.Rmd`) and then add the subsequent code that you want to use as chunks. The R files are numbered in the order that I would usually run them, however this can change depending on your data and goals. Below you will find a summary of what these files are.
+DArTseq data is returned to us as a zipped folder containing multiple spreadsheets. There are multiple spreadsheets because the data be SNP data formatted in single or double rows or SilicoDArT data. We only use the spreadsheet with SNP data in single row format for our work.
 
-### Directories
+Note that DArT does not label their files in a consistent manner, the file name can be in a .xlsx or .csv format and can end with a "SNP_mapping_2.csv" or "SNP_singlerow.csv".
 
-You will have to set up your directories in a specific way for this to work, as per the original ReCER method. For example, if I'm working with the species *Zieria obcordata* I would have the directories set up as:
+Always check that you have the correct file:
 
-    --ZierObco
-      |-- Analyses.Rmd
-      `--ZierObco
-        |--dart_raw
-        |   `-Report_DZ22-7321_SNP_mapping_2.csv
-        |--meta
-        |   `-ZierObco_DZ22-7321_meta.csv
-        |--popgen
-        `--outputs
+The sequence data produced by DArT goes through their proprietary filters and the resulting spreadsheets contain loci ID and relevant quality information (e.g. call rate, repeatability, information content). The genotype data is further to the right of the spreadsheet. Refer to the "metada.xlsx" file accompanying the spreadsheets for the type of quality information captured in the spreadsheets and the samples that were successfully sequenced. The SNP data formatted in single rows does not contain duplicated IDs and the data contains 0s (homozygote), 1s (homozygote), 2s (heterozygote).
 
-Where `Report_DZ22-7321_SNP_mapping_2.csv` is my DArT data and `ZierObco_DZ22-7321_meta.xlsx` is my metadata.
+Note that when a dataset is received, it is up to the person in charge of the study to save the dataset on N drive under: N:\\Evolutionary Ecology\\Restore & Renew\\DArT data
+
+### Analysing the data
+
+An R package called RRtools was developed in house as part of the Restore and Renew analytical workflow. The package was designed to allow the analysis of DArTseq data for a large number of species in a streamline manner (i.e. consistent labelling system and structured working directories).
+
+### Setting up your directories
+
+Prior to analysing, a working directory needs to be set up. The directory is structured in a way that allows RRtools, our in house developed R package to access the DArTseq data and output the data in various formats.
+
+Below is an example working directory for the *Zieria obcordata* dataset.
+
+The name of the working directory is usually a combination of the abbreviated genus and species name because the DArTseq data is mostly used for studying a species. e.g., ZierObco for Zieria obcordata.
+
+In the directory, three folders are to be manually generated (dart_raw, meta, popgen) and two folders (dart_standard, outputs) will appear as RRtools is run:
+
+    |-- ZierObco ........................working directory
+        |-- dart_raw ........................where DArTseq data is kept
+            |-- Report_DZ22-7321_SNP_mapping_2.csv
+        |-- meta ........................where metadata is kept
+            |-- ZierObco_DZ22-7321_meta.csv
+        |-- popgen ...................where DArTseq data in different formats are kept
+        |-- dart_standard ....... where saved objects containing DArTseq data are kept  
+        |-- outputs....................  where visual outputs are kept
+
+Where `Report_DZ22-7321_SNP_mapping_2.csv` is the DArTseq data in single row format and `ZierObco_DZ22-7321_meta.xlsx` is themetadata.
 
 ### Metadata
 
-The metadata file has four compulsory columns (sample, site, lat, long), plus any additional data you wish to use. I would recommend having a species or "sp" column as well. You do not need to leave any cells -intentionally blank as with the previous ReCER protocol, as any unwanted samples can be removed during the R analysis by whatever condition you're interested in.
+The metadata is in a spreadsheet with four compulsory columns (sample, site, lat, long), plus any additional data you wish to use. This can be a species or "sp" column if outgroup species are included in the dataset. A notes column is recommended to keep track of the samples during the analysis.
 
-## Installation of RRtools
+You do not need to leave any cells -intentionally blank as with the previous ReCER protocol, as any unwanted samples can be removed during the R analysis by whatever condition you're interested in.
 
-Obtain a copy of the in house made R package from XXX
+## Installing RRtools
+
+The RRtools workflow consist of an initial quality SNP filtering step and subsequent conversion of the genotype data into a range of formats depending on the type of analysis to be conducted.
+
+RRtools can only be installed from a local directory (i.e., not from an online repository). A copy of the R package can be obtained from N:\\Evolutionary Ecology\\R for everyone.
+
+Example of how to install RRtools in R below:
 
     library(devtools)
 
     install("C:/Users/yaps/Desktop/RRtools")
 
-## Main analyses
+## Using RRtools
 
-### Main analyses
+### Quality filtering
 
 #### `1 data import and qc.Rmd`
 
